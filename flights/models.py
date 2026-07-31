@@ -1,4 +1,5 @@
 from django.db import models
+import uuid
 
 
 class Airport(models.Model):
@@ -120,5 +121,106 @@ class Gate(models.Model):
     )
     def __str__(self):
         return f"{self.airport.icao_code} - Terminal {self.terminal} Gate {self.gate_number}"
-           
+class Passenger(models.Model):
+    GENDER_CHOICES = [
+        ("MALE", "Male"),
+        ("FEMALE", "Female"),
+        ("OTHER", "Other")
+    ]
+    first_name = models.CharField(max_length=50)
+    last_name = models.CharField(max_length=50)
+    
+    date_of_birth = models.DateField()
+ 
+    gender = models.CharField(
+        max_length=10,
+        choices=GENDER_CHOICES
+    )
+    nationality = models.CharField(max_length=50)
+    
+    passpprt_number = models.CharField(
+       max_length=50,
+       unique=True
+    )
+
+    email = models.CharField(
+        unique=True
+    )
+
+    phone_number = models.CharField(
+        max_length=20
+    )
+
+    emergency_contact = models.CharField(
+        max_length=100
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True
+    )
+
+    def __str__(self):
+        return f"{self.first_name} {self.last_name}"
+
+class Booking(models.Model):
+    CLASS_CHOICES = [
+        ("ECONOMY", "Economy"),
+        ("BUSINESS", "Business"),
+        ("FIRST", "First Claass"),
+    ]
   
+
+    STATUS_CHOICES = [
+        ("PENDING", "Pending"),
+        ("CONFIRMED", "Confirmed"),
+        ("CANCELLED", "Cancelled"),
+        ("CHECKED_IN", "Checked in"),
+    ]
+
+    PAYMENT_CHOICES = [
+        ("UNPAID", "Unpaid"),
+        ("PAID", "Paid"),
+        ("REFUNDED", "Refunded")
+    ]
+
+    booking_reference = models.CharField(
+        max_length=12,
+        unique=True,
+        editable=False
+    )
+
+    passenger = models.ForeignKey(
+        Passenger,
+        on_delete=models.CASCADE,
+        related_name="bookings"
+    )
+
+    flight = models.ForeignKey(
+        Flight,
+        on_delete=models.CASCADE,
+        related_name="bookings"
+    )
+
+    seat_number = models.CharField(max_length=5)
+
+    travel_class = models.CharField(
+        max_length=20,
+        choices=CLASS_CHOICES,
+        default="ECONOMY"
+    )
+
+    payment_status = models.CharField(
+        max_length=20,
+        choices=PAYMENT_CHOICES,
+        default="UNPAID"
+    )
+
+    booking_date = models.DateTimeField(auto_now_add=True)
+
+    def save(self, *args, **kwargs):
+        if not self.booking_reference:
+            self.booking_reference = str(uuid.uuid4()).replace("-", "").upper()[:12]
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.booking_reference} - {self.passenger}"
