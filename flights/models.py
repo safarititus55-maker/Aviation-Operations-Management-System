@@ -224,3 +224,245 @@ class Booking(models.Model):
 
     def __str__(self):
         return f"{self.booking_reference} - {self.passenger}"
+
+from django.utils import timezone
+
+class CheckIn(models.Model):
+    STATUS_CHOICES = [
+        ("PENDING", "Pending"),
+        ("CHECKED_IN", "Checked in"),
+        ("BOARDED", "Boarded"),
+        ("MISSED", "Missed Flifght"),
+    ]
+
+    booking = models.OneToOneField(
+        Booking,
+        on_delete=models.CASCADE,
+        related_name="checkin"
+    )
+
+    seat_number = models.CharField(
+        max_length=5,
+        blank=True,
+        null=True
+    )
+
+    baggage_count = models.PositiveIntegerField(default=0)
+
+    baggage_weight = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=0
+    )
+
+    boarding_pass_number = models.CharField(
+        max_length=30,
+        unique=True
+    )
+
+    status = models.CharField(
+        max_length=200,
+        choices=STATUS_CHOICES,
+        default="PENDING"
+    )
+
+    def __str__(self):
+        return f"{self.booking.booking_reference} - {self.status}"
+
+class Baggage(models.Model):
+    BAG_TYPE_CHOICES = [
+        ("CHECKED", "Checked"),
+        ("CARRY_ON", "Carry-On"),
+        ("OVERSIZED", "Oversized"),
+    ]
+
+    STATUS_CHOICES = [
+        ("CHECKED", "Checked"),
+        ("LOADED", "Loaded"),
+        ("IN_TRANSIT", "In Transit"),
+        ("ARRIVED", "Arrived"),
+        ("CLAIMED", "Claimed"),
+        ("LOST", "Lost"),
+    ]
+
+    check_in = models.ForeignKey(
+        CheckIn,
+        on_delete=models.CASCADE,
+        related_name="baggage"
+    ) 
+
+    bag_tag_number = models.CharField(
+         max_length=30,
+         unique=True
+    )
+
+    bag_type = models.CharField(
+        max_length=20,
+        choices=BAG_TYPE_CHOICES,
+        default="CHECKED"
+    )
+
+    weight = models.DecimalField(
+        max_digits=5,
+        decimal_places=2
+    )
+
+    destination = models.ForeignKey(
+        Airport,
+        on_delete=models.PROTECT,
+        related_name="arriving_baggage"
+    )
+
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default="CHECKED"
+    )
+
+    remarks = models.TextField(
+        blank=True,
+        null=True
+    )
+
+    def __str__(self):
+        return f"{self.bag_tag_number} ({self.status})"
+
+class Boarding(models.Model):
+    STATUS_CHOICES = [
+        ("WAITING", "Waiting"),
+        ("BOARDED", "Boarded"),
+        ("NO_SHOW", "No Show"),
+        ("DENIED", "Denied Boarding"),
+    ]
+
+    check_in = models.OneToOneField(
+        CheckIn,
+        on_delete=models.CASCADE,
+        related_name="boarding"
+    )
+
+    gate = models.ForeignKey(
+        Gate,
+        on_delete=models.PROTECT,
+        related_name="boardings"
+    )
+
+    boarding_time = models.DateTimeField(default=timezone.now)
+
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default="WAITING"
+    )
+
+    boarded_by = models.CharField(
+        max_length=100,
+        blank=True,
+    )
+
+    remarks =  models.TextField(
+        blank=True,
+        null=True
+    )
+
+    def __str__(self):
+        return f"{self.check_in.booking.booking_reference} - {self.status}"
+
+class CrewMember(models.Model):
+    ROLE_CHOICES = [
+        ("PILOT", "Pilot"),
+        ("COPILOT", "Co-Pilot"),
+        ("CABIN_CREW", "Cabin Crew"),
+    ]
+
+    first_name = models.CharField(max_length=50)
+
+    last_name = models.CharField(max_length=50)
+
+    employee_number = models.CharField(
+        max_length=20,
+        unique=True
+    )
+
+    role = models.CharField(
+        max_length=20,
+        choices=ROLE_CHOICES
+    )
+
+    phone_number = models.CharField(
+        max_length=20,
+        blank=True
+    )
+
+    email = models.EmailField(
+        blank=True
+    )
+
+    active = models.BooleanField(
+        default=True
+    )
+
+    def __str__(self):
+        return f"{self.first_name} {self.last_name} - {self.role}"
+
+class CrewAssignment(models.Model):
+    crew_member = models.ForeignKey(
+        CrewMember,
+        on_delete=models.CASCADE,
+        related_name="assignments"
+    )
+
+    flight = models.ForeignKey(
+        Flight,
+        on_delete=models.CASCADE,
+        related_name="crew_assignment"
+    )
+
+    assigned_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("crew_member", "flight")
+        ordering = ["flight"]
+
+    def __str__(self):
+        return f"{self.crew_member} --> {self.flight.flight_number}"
+
+
+class Runway(models.Model):
+    STATUS_CHOICES = [
+        ("AVAILABLE", "Available"),
+        ("OCCUPIED", "Occupied"),
+        ("MAINTENANCE", "Under Maintenance"),
+        ("CLOSED", "Closed"),
+    ]
+
+    airport = models.ForeignKey(
+        Airport,
+        on_delete=models.CASCADE,
+        related_name="runways"
+    )
+
+    runway_code = models.CharField(
+        max_length=10,
+        unique=True
+    )
+
+    length_meters = models.PositiveIntegerField()
+
+    width_meters = models.PositiveIntegerField()
+
+    surface_type = models.CharField(
+        max_length=30,
+        default="Asphalt"
+    )
+
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default="AVAILABLE"
+    )
+
+    lighting_available = models.BooleanField(default=True)
+
+    def __str__(self):
+        return f"{self.airport.icao_code} - {self.runway_code}"

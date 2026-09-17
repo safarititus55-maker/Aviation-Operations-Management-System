@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AOMS Dashboard</title>
+
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f4f6f8;
+            color: #222;
+        }
+
+        header {
+            background: #12355b;
+            color: white;
+            padding: 20px 30px;
+        }
+
+        header h1 {
+            margin: 0;
+        }
+
+        header p {
+            margin: 5px 0 0;
+        }
+
+        nav {
+            background: #ffffff;
+            padding: 15px 30px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        nav a {
+            margin-right: 20px;
+            text-decoration: none;
+            color: #12355b;
+            font-weight: bold;
+        }
+
+        .container {
+            padding: 30px;
+        }
+
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        .card h3 {
+            margin-top: 0;
+            font-size: 15px;
+            color: #666;
+        }
+
+        .number {
+            font-size: 32px;
+            font-weight: bold;
+            color: #12355b;
+        }
+
+        .section {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+
+        th {
+            background: #f4f6f8;
+        }
+
+        .status {
+            font-weight: bold;
+        }
+
+        footer {
+            text-align: center;
+            padding: 25px;
+            color: #777;
+        }
+    </style>
+</head>
+
+<body>
+
+<header>
+    <h1>AOMS</h1>
+    <p>Aviation Operations Management System</p>
+</header>
+
+<nav>
+    <a href="/">Dashboard</a>
+    <a href="/admin/">Administration</a>
+</nav>
+
+<div class="container">
+
+    <h2>Operations Dashboard</h2>
+
+    <div class="cards">
+
+        <div class="card">
+            <h3>Airports</h3>
+            <div class="number">{{ airport_count }}</div>
+        </div>
+
+        <div class="card">
+            <h3>Airlines</h3>
+            <div class="number">{{ airline_count }}</div>
+        </div>
+
+        <div class="card">
+            <h3>Aircraft</h3>
+            <div class="number">{{ aircraft_count }}</div>
+        </div>
+
+        <div class="card">
+            <h3>Flights</h3>
+            <div class="number">{{ flight_count }}</div>
+        </div>
+
+        <div class="card">
+            <h3>Gates</h3>
+            <div class="number">{{ gate_count }}</div>
+        </div>
+
+        <div class="card">
+            <h3>Passengers</h3>
+            <div class="number">{{ passenger_count }}</div>
+        </div>
+
+        <div class="card">
+            <h3>Bookings</h3>
+            <div class="number">{{ booking_count }}</div>
+        </div>
+
+        <div class="card">
+            <h3>Baggage</h3>
+            <div class="number">{{ baggage_count }}</div>
+        </div>
+
+        <div class="card">
+            <h3>Crew</h3>
+            <div class="number">{{ crew_count }}</div>
+        </div>
+
+        <div class="card">
+            <h3>Runways</h3>
+            <div class="number">{{ runway_count }}</div>
+        </div>
+
+    </div>
+
+    <div class="section">
+
+        <h2>Flight Operations</h2>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Flight</th>
+                    <th>Airline</th>
+                    <th>Departure</th>
+                    <th>Arrival</th>
+                    <th>Departure Time</th>
+                    <th>Gate</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+
+            <tbody>
+
+                {% for flight in flights %}
+
+                <tr>
+                    <td>{{ flight.flight_number }}</td>
+                    <td>{{ flight.airline.name }}</td>
+                    <td>{{ flight.departure_airport.iata_code }}</td>
+                    <td>{{ flight.arrival_airport.iata_code }}</td>
+                    <td>{{ flight.scheduled_departure }}</td>
+
+                    <td>
+                        {% if flight.gate %}
+                            {{ flight.gate.gate_number }}
+                        {% else %}
+                            Not assigned
+                        {% endif %}
+                    </td>
+
+                    <td class="status">
+                        {{ flight.get_status_display }}
+                    </td>
+                </tr>
+
+                {% empty %}
+
+                <tr>
+                    <td colspan="7">No flights currently available.</td>
+                </tr>
+
+                {% endfor %}
+
+            </tbody>
+        </table>
+
+    </div>
+
+</div>
+
+<footer>
+    AOMS Prototype v1
+</footer>
+
+</body>
+</html>
