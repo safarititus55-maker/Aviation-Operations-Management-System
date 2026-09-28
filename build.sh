@@ -5,3 +5,7 @@ pip install -r requirements.txt
 python manage.py collectstatic --noinput
 python manage.py migrate
 python manage.py create_aoms_admin
+
+if [ "${AOMS_POPULATE_DATA:-false}" = "true" ]; then
+    python manage.py populate_aoms
+fi
