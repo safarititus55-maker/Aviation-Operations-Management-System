@@ -118,7 +118,7 @@ class Command(BaseCommand):
                     name=name,
                     city=city,
                     country=country,
-                    timezone=timezone,
+                    timezone=tz,
                 )
 
             else:
