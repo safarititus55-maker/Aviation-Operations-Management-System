@@ -9,6 +9,9 @@ from flights.models import (
     Flight,
     Passenger,
     Booking,
+    CheckIn,
+    Baggage,
+    Boarding,
     CrewMember,
     CrewAssignment,
 )
@@ -450,6 +453,232 @@ class Command(BaseCommand):
         self.stdout.write(
             self.style.SUCCESS(
                 f"Bookings ready: {len(bookings)}"
+            )
+        )
+
+                # ---------------------------------------------------------
+        # 9. CHECK-IN
+        # ---------------------------------------------------------
+
+        checkins = []
+
+        for i, booking in enumerate(bookings):
+
+            checkin_status = random.choice(
+                ["PENDING", "CHECKED_IN", "BOARDED"]
+            )
+
+            baggage_count = random.randint(0, 2)
+
+            baggage_weight = (
+                random.uniform(0, 40)
+                if baggage_count > 0
+                else 0
+            )
+
+            checkin, created = CheckIn.objects.get_or_create(
+                booking=booking,
+                defaults={
+                    "seat_number": booking.seat_number,
+                    "baggage_count": baggage_count,
+                    "baggage_weight": round(baggage_weight, 2),
+                    "boarding_pass_number": f"BP-{booking.booking_reference}",
+                    "status": checkin_status,
+                },
+            )
+
+            if not created:
+                checkin.seat_number = booking.seat_number
+                checkin.baggage_count = baggage_count
+                checkin.baggage_weight = round(baggage_weight, 2)
+                checkin.status = checkin_status
+                checkin.save()
+
+            if checkin_status in ["CHECKED_IN", "BOARDED"]:
+                booking.status = "CHECKED_IN"
+                booking.save()
+
+            checkins.append(checkin)
+
+        self.stdout.write(
+            self.style.SUCCESS(
+                f"Check-ins ready: {len(checkins)}"
+            )
+        )
+
+        # ---------------------------------------------------------
+        # 10. BAGGAGE
+        # ---------------------------------------------------------
+
+        baggage_list = []
+
+        for i, checkin in enumerate(checkins):
+
+            # Avoid creating excessive baggage on every run
+            if checkin.baggage_count <= 0:
+                continue
+
+            existing_count = checkin.baggage.count()
+            bags_needed = checkin.baggage_count - existing_count
+
+            for j in range(max(0, bags_needed)):
+
+                bag_status = random.choice(
+                    ["CHECKED", "LOADED", "IN_TRANSIT", "ARRIVED", "CLAIMED"]
+                )
+
+                baggage = Baggage.objects.create(
+                    check_in=checkin,
+                    bag_tag_number=f"BAG-{checkin.booking.booking_reference}-{j + 1}",
+                    bag_type=random.choice(
+                        ["CHECKED", "CARRY_ON", "OVERSIZED"]
+                    ),
+                    weight=round(random.uniform(5, 25), 2),
+                    destination=checkin.booking.flight.arrival_airport,
+                    status=bag_status,
+                    remarks="AOMS demonstration baggage",
+                )
+
+                baggage_list.append(baggage)
+
+        self.stdout.write(
+            self.style.SUCCESS(
+                f"Baggage ready: {Baggage.objects.count()}"
+            )
+        )
+
+        # ---------------------------------------------------------
+        # 11. BOARDING
+        # ---------------------------------------------------------
+
+        boarding_records = []
+
+        for checkin in checkins:
+
+            if checkin.status not in ["CHECKED_IN", "BOARDED"]:
+                continue
+
+            boarding_status = (
+                "BOARDED"
+                if checkin.status == "BOARDED"
+                else "WAITING"
+            )
+
+            boarding, created = Boarding.objects.get_or_create(
+                check_in=checkin,
+                defaults={
+                    "gate": checkin.booking.flight.gate,
+                    "boarding_time": timezone.now(),
+                    "status": boarding_status,
+                    "boarded_by": "AOMS Operations",
+                    "remarks": "Generated AOMS operational record",
+                },
+            )
+
+            if not created:
+                boarding.gate = checkin.booking.flight.gate
+                boarding.status = boarding_status
+                boarding.boarded_by = "AOMS Operations"
+                boarding.save()
+
+            boarding_records.append(boarding)
+
+        self.stdout.write(
+            self.style.SUCCESS(
+                f"Boarding records ready: {len(boarding_records)}"
+            )
+        )
+
+        # ---------------------------------------------------------
+        # 12. CREW MEMBERS
+        # ---------------------------------------------------------
+
+        crew_data = [
+            ("John", "Kamau", "PILOT"),
+            ("Peter", "Mwangi", "PILOT"),
+            ("David", "Otieno", "PILOT"),
+            ("James", "Kariuki", "PILOT"),
+            ("Samuel", "Njoroge", "COPILOT"),
+            ("Brian", "Mutua", "COPILOT"),
+            ("Joseph", "Maina", "COPILOT"),
+            ("Daniel", "Kiptoo", "COPILOT"),
+            ("Mary", "Wanjiku", "CABIN_CREW"),
+            ("Grace", "Achieng", "CABIN_CREW"),
+            ("Sarah", "Njeri", "CABIN_CREW"),
+            ("Faith", "Otieno", "CABIN_CREW"),
+            ("Lucy", "Kamau", "CABIN_CREW"),
+            ("Esther", "Mwangi", "CABIN_CREW"),
+            ("Ann", "Mutua", "CABIN_CREW"),
+            ("Linda", "Kariuki", "CABIN_CREW"),
+        ]
+
+        crew_members = []
+
+        for i, (first_name, last_name, role) in enumerate(crew_data):
+
+            crew_member, created = CrewMember.objects.get_or_create(
+                employee_number=f"EMP-{1000 + i}",
+                defaults={
+                    "first_name": first_name,
+                    "last_name": last_name,
+                    "role": role,
+                    "phone_number": f"+254711{100000 + i}",
+                    "email": f"crew{i}@aoms.example",
+                    "active": True,
+                },
+            )
+
+            crew_members.append(crew_member)
+
+        self.stdout.write(
+            self.style.SUCCESS(
+                f"Crew members ready: {len(crew_members)}"
+            )
+        )
+
+        # ---------------------------------------------------------
+        # 13. CREW ASSIGNMENTS
+        # ---------------------------------------------------------
+
+        pilots = [
+            crew for crew in crew_members
+            if crew.role == "PILOT"
+        ]
+
+        copilots = [
+            crew for crew in crew_members
+            if crew.role == "COPILOT"
+        ]
+
+        cabin_crew = [
+            crew for crew in crew_members
+            if crew.role == "CABIN_CREW"
+        ]
+
+        assignments_created = 0
+
+        for i, flight in enumerate(flights):
+
+            selected_crew = [
+                pilots[i % len(pilots)],
+                copilots[i % len(copilots)],
+                cabin_crew[(i * 2) % len(cabin_crew)],
+                cabin_crew[(i * 2 + 1) % len(cabin_crew)],
+            ]
+
+            for crew_member in selected_crew:
+
+                assignment, created = CrewAssignment.objects.get_or_create(
+                    crew_member=crew_member,
+                    flight=flight,
+                )
+
+                if created:
+                    assignments_created += 1
+
+        self.stdout.write(
+            self.style.SUCCESS(
+                f"Crew assignments ready: {CrewAssignment.objects.count()}"
             )
         )
 
